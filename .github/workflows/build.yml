@@ -1,0 +1,37 @@
+name: docker
+
+on:
+  schedule:
+    - cron: 0 0 * * *
+  push:
+    branches:
+    - master
+    - release/*
+
+jobs:
+  build:
+    name: Build docker:buildx image.
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Docker login
+      env:
+        USER_NAME: ${{ secrets.USER_NAME }}  
+        PASSWORD: ${{ secrets.PASSWORD }}
+      run: |
+        docker login -u $USER_NAME -p $PASSWORD
+
+    - name: Build docker:buildx
+      env:
+        USER_NAME: ${{ secrets.USER_NAME }}
+      working-directory: .
+      run: |
+        docker pull $USER_NAME/docker:buildx || :
+        docker build --cache-from $USER_NAME/docker:buildx --pull --file Dockerfile --tag $USER_NAME/docker:buildx .
+        docker push $USER_NAME/docker:buildx
+
+    - name: Docker logout
+      run: |
+        docker logout
