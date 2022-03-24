@@ -14,14 +14,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v1
+    - name: Checkout
+      uses: actions/checkout@v1
+    - name: Set up Docker Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@v1
 
     - name: Docker login
       env:
         USER_NAME: ${{ secrets.USER_NAME }}  
         PASSWORD: ${{ secrets.PASSWORD }}
       run: |
+        docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
         docker login -u $USER_NAME -p $PASSWORD
+        docker buildx create --use
 
     - name: Build docker:buildx
       env:
@@ -29,8 +35,7 @@ jobs:
       working-directory: .
       run: |
         docker pull $USER_NAME/docker:buildx || :
-        docker build --cache-from $USER_NAME/docker:buildx --pull --file Dockerfile --tag $USER_NAME/docker:buildx .
-        docker push $USER_NAME/docker:buildx
+        docker buildx build --push --platform linux/arm64/v8,linux/amd64 --cache-from $USER_NAME/docker:buildx --pull --file Dockerfile --tag $USER_NAME/docker:buildx .
 
     - name: Docker logout
       run: |
